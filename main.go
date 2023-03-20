@@ -8,42 +8,36 @@ import (
 )
 
 func main() {
-	path := "/Users/robsonpetinari/Documents/EFD_00018_00001.txt"
+	path := "/Users/robsonpetinari/Documents/EFD_00021_00001.txt"
 	arquivo, err := lerLinhasArquivo(path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	var _0200List []string
-	var _C170List []string
-	erros := 0
-
-	for _, line := range arquivo {
-		if strings.Contains(line, "|0200|") {
-			_0200List = append(_0200List, line)
-		}
-		if strings.Contains(line, "|C170|") {
-			_C170List = append(_C170List, line)
-		}
+	indexMap := make(map[string]int, len(arquivo))
+	for i, line := range arquivo {
+		indexMap[line] = i
 	}
 
-	for _, item0200 := range _0200List {
-		linha0200 := strings.Split(item0200, "|")
-		for _, itemC170 := range _C170List {
-			linhaC170 := strings.Split(itemC170, "|")
-			if linha0200[2] == linhaC170[3] {
-				if linha0200[6] != linhaC170[6] {
-					linhaC170Novo := make([]string, len(linhaC170))
-					copy(linhaC170Novo, linhaC170)
-					linhaC170Novo[6] = linha0200[6]
-					indexC170, err := indiceItemArquivo(itemC170, arquivo)
-					if err != nil {
-						fmt.Println(err)
-						return
+	erros := 0
+
+	for i, line := range arquivo {
+		if strings.Contains(line, "|0200|") {
+			linha0200 := strings.Split(line, "|")
+			for j := i + 1; j < len(arquivo); j++ {
+				if strings.Contains(arquivo[j], "|C170|") {
+					linhaC170 := strings.Split(arquivo[j], "|")
+					if linha0200[2] == linhaC170[3] && linha0200[6] != linhaC170[6] {
+						linhaC170[6] = linha0200[6]
+						indexC170, ok := indexMap[arquivo[j]]
+						if !ok {
+							fmt.Printf("Erro: índice não encontrado para linha %q\n", arquivo[j])
+							continue
+						}
+						arquivo[indexC170] = strings.Join(linhaC170, "|")
+						erros++
 					}
-					arquivo[indexC170] = strings.Join(linhaC170Novo, "|")
-					erros++
 				}
 			}
 		}
@@ -84,13 +78,4 @@ func escreverLinhasArquivo(path string, linhas []string) error {
 		fmt.Fprintln(writer, linha)
 	}
 	return writer.Flush()
-}
-
-func indiceItemArquivo(item string, arquivo []string) (int, error) {
-	for i, linha := range arquivo {
-		if linha == item {
-			return i, nil
-		}
-	}
-	return -1, fmt.Errorf("item %s não encontrado no arquivo", item)
 }
